@@ -1,0 +1,224 @@
+---
+title: "Reproducible Research on The Effect of Financial Ratios towards Earnings per Share"
+author: "Kai Xing ID: 389862 Adrian Hirt ID:K-14561"
+date: "20/05/2022"
+output: 
+  html_document:
+    theme: spacelab
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo    = TRUE, 
+                      cache   = TRUE,
+                      message = FALSE, 
+                      warning = FALSE)
+```
+
+ 
+
+```{r cache = F}
+
+Sys.setenv(LANG = "en")
+
+options(scipen=999)
+
+library("MASS")
+library("sandwich")
+library("zoo")
+library("car")
+library("lmtest")
+library("Formula")
+library("plm")
+library("stargazer")
+library("pcse")
+library("pacman")
+library("ggplot2")
+
+```
+
+## 1.The Effect of Financial Ratios towards Earnings per Share
+
+**The goal** for this project is to reproduce a econometric analysis on The effect of financial ratios towards Earnings per Share. Previously it was done in Stata. for this time, we will perform the analysis through R.
+
+The econometric model is a panel data model which requires hypothesis testing and model selection. The target would be to verify the robustness of the estimation result through following steps :
+
+**First, to verify the significance of the estimators to see if there are gonna be any inconsistencies.**
+
+**Second, to add a new dependent variable:"logarithm of total asset" to represent company's size and check for consistency.**
+
+**Third, to apply two more models: "Heteroskedasticity-Consistent Covariance Matrix Estimation" and "Panel-Corrected Standard Error".**
+
+Based on the result, this research is designed to verify following hypothesis:
+
+**Hypothesis 1: Return on asset has positive influence on earnings per share. **
+
+**Hypothesis 2: Debt to equity has negative influence on earnings per share.**
+
+**Hypothesis 3: Company size has positive influence on earnings per share.**
+
+
+### 1.1 Data processing  
+
+
+```{r}
+dataset = read.csv(file="dataset.csv", sep=",", header=TRUE)
+head(dataset)
+```
+
+```{r}
+str(dataset)
+#Checking missing value
+sum(is.na(dataset))
+```
+```{r}
+boxplot(dataset$EPS~dataset$year, dataset, xlab="Year",ylab="EPS")
+```
+
+```{r}
+hist(dataset$EPS, xlab = "EPS")
+```
+
+```{r}
+qplot(EPS, data = dataset, geom = "density", color = year)
+```
+
+
+### 1.2 Model selection 
+
+
+```{r}
+random <-plm(EPS~ROA+Dbequrt+LOGTA, data=dataset, 
+             index=c("CompanyCode", "year"), model="random")
+summary(random)
+```
+
+```{r}
+fixed <-plm(EPS~ROA+Dbequrt+LOGTA, data=dataset, 
+            index=c("CompanyCode", "year"), model="within")
+summary(fixed)
+```
+
+```{r}
+#hausmann test
+phtest(fixed, random)
+```
+Since the P-value from Hausman test is 0.3056. For a = 0.05, we can not reject the null hypothesis. Therefore random effect model is preferred than fixed effect model. 
+
+```{r}
+OLS <-plm(EPS~ROA+Dbequrt+LOGTA, data=dataset, 
+          index=c("CompanyCode", "year"), model="pooling")
+summary(OLS)
+plmtest(OLS, type=c("bp"))
+
+```
+Since the P-value from Breusch-Pagan test is 0.00000000000000022. For a = 0.05, we should reject the null hypothesis. Therefore individual effect is significant and random effect model is preferred than OLS model. We should evaluate random effect model compared to the other two models.
+
+### 1.3 Estimation and diagnostic tests
+
+```{r}
+# Testing for serial correlation
+pbgtest(random)
+```
+Since the P-value from Breusch-Godfrey/Wooldridge test is 0.00000000000000022. For a = 0.05, we should reject the null hypothesis. Therefore there is a serial correlation problem from the estimated random model.
+
+```{r}
+# Testing for heteroskedasticity
+bptest(EPS~ROA+Dbequrt+LOGTA, data=dataset, studentize=TRUE)
+```
+Since the P-value from Breusch-Pagan test is 0.00000000000000022. For a = 0.05, we should reject the null hypothesis. Therefore there is a heteroskedasticity problem from the estimated random model besides the serial correlation problem. According to *MacKinnon J. G., White H.* (1985),**Heteroskedasticity-Consistent Covariance Matrix Estimation **method might solve there problems..
+
+```{r}
+# Controlling for heteroskedasticity and autocorrelation:
+Robust <- coeftest(fixed, vcov.=vcovHC(fixed, method="white1", type="HC0", cluster="group"))
+```
+
+Also **Panel-Corrected Standard Error(PCSE) **method can also solve these issues and allow for better inference from estimated model shown by *Delia Bailey, Jonathan N. Katz*.
+
+
+```{r}
+lm_pcse <- lm(EPS~ROA + Dbequrt + LOGTA, data = dataset)
+PCSE <- pcse(lm_pcse,groupN = dataset$CompanyCode, groupT =dataset$year)
+summary(PCSE)
+```
+
+
+
+### 1.4 Results of estimation
+
+```{r}
+finalResult <- stargazer(OLS, fixed, random, Robust, title="Results", align=TRUE, type="text", 
+covariate.labels=c("Return of Asset","Debt to Equity",
+"Log of Total Asset"), no.space=TRUE,column.labels=c("POLS", "Fixed effect", "Random effect ", "Random effect with robust SE"))
+
+
+``` 
+
+
+
+                                                                                    
+
+
+
+Table above presents the regression result step by step with pooled ordinary least squared (POLS), fixed effect (FE), random effect (RE)， Random effect model with robust Standard Error. Since the existing of Heteroskedasticity and autocorrelation issues, Random effect model with robust Standard Error method should be made for this model.This study will focus on its result and compare the differences among other models. 
+
+Random effect with robust Standard Error model regression shows that the ROA has p-value of 0.002 (0.002 < 0.01). So, at the significance level of 0.05, **return on asset** has positive influence on earnings per share. If ROA increases by one unit and other variables stay the same, EPS will increase by 0.06. In the previous research **R. Bratamanggala* conclude that return on asset has significant effect over earnings per share as well. Their analysis is focusing on the Indonesia manufacturing sector using companies listed in the Indonesian Stock Exchange.
+
+**Debt to Equity** has p-value of 0.00001 (0.00001 < 0.01). So, at the significance level of 0.01, debt to equity has negative influence on earnings per share. If Debt to Equity increases by one unit and other variables stay the same, EPS will decrease by 0.0001. Debt to Equity represents company’s capital structure. A higher value shows that the company uses aggressively financing policy. Normally, as firms apply more debt, the firm losses its capacity to gain profit because of high interest. However, in the previous research done by R. Bratamanggala  and Khalaf , they also find a positive correlation between Debt to Equity and earnings per share. The reason behind it might be that the debt can support short term liquidity issue and long-term growth for the firm. In this research, Debt to equity has negative influence over earnings per share.
+
+**logarithm of total asset** has p-value of 0.009 (0.009< 0.01). So, at the significance level of 0.01, logarithm of total asset (company size) has positive influence on earnings per share. If LOGTA increases by one precent and other variables stay the same, EPS will increase by 0.092. 
+
+The result of R-squared is 0.589 for random effect regression. This model might explain the changes of earnings per share up to 0.589 and the rest is influenced by other variables which are not discussed in this research. The other  regressions also provide similar results. All variables in different models pasted t-test at significance level of 0.01.  
+
+## 2.Comparison between previous studies and the current study
+
+```{r}
+previousDataset = read.csv(file="previous_dataset.csv", sep=",", header=TRUE)
+head(previousDataset)
+```
+
+
+```{r}
+previousRandom <-plm(EPS~ROA+Dbequrt, data=previousDataset, 
+             index=c("CompanyCode", "year"), model="random")
+summary(previousRandom)
+```
+
+```{r}
+finalResult <- stargazer(previousRandom, random, Robust, title="Results", align=TRUE, type="text", 
+covariate.labels=c("Return of Asset","Debt to Equity",
+"Log of Total Asset"), no.space=TRUE,column.labels=c("Previous random effect", "Random effect ", "Random effect with robust SE"))
+```
+
+As we can see, the new model obtained similar result compared to the previous model. Previous independent variables are still statistically significant for the new model at the significant level of 0.01. The new added variable "Log of Total Asset" is also statistically significant at the significant level of 0.01. The R squared value has been improved from 0.565 to 0.589 thanks to the added independent variable. 
+
+What's more, this study applied new model(Random effect with robust SE) to deal with heteroskedasticity and autocorrelation issues. The obtained coefficients are very close to the original coefficients which also proved the robustness and consistency for the model. This shows stability of the estimation and provide strong evidence for the conclusion.
+
+
+## 3. Conclusion
+This research is conducted to verify the empirical evidence about the influence of financial ratios and company size on earnings per share partially and simultaneously on listed a share companies at Shanghai Stock Exchange from 2009 to 2018.
+
+The results obtained are:
+
+**-	Return on asset has positive and significant influence on earnings per share.**
+
+**-	Debt to equity has negative influence on earnings per share.**
+
+**-	Company size has positive influence on earnings per share.**
+
+The research conclusion can be the basis for investors to evaluate one company’s performance. For company’s manager board, it can also be applied to diagnose the company’s financial situation and set up strategy to increase its earnings. For the research sample, the traditional financial analysis still plays a key role in evaluating one’s performance, especially, the profitability and leveraging ratio. A company that can constantly generate desired earnings and use leverage wisely will growth healthily and preferred by investors. Also because of economies of scale, a bigger company size will also benefit the company.
+
+Since the R-squared value is not high in this research, there are might be other information that could affect firm’s return. For example, political situation and policy, technical situation and macroeconomic condition could be good variables adding to the financial ratios that this research chosen. Also, due to the limit of data, this research only takes 10 years data from A share companies listed at Shanghai Stock exchange. A similar research on another country is recommended.
+
+
+
+
+
+
+
+
+
