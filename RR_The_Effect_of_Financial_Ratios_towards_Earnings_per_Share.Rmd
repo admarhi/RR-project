@@ -71,7 +71,6 @@ head(dataset)
 ```
 
 ```{r}
-str(dataset)
 #Checking missing value
 sum(is.na(dataset))
 ```
