@@ -26,7 +26,6 @@ knitr::opts_chunk$set(echo    = TRUE,
 Sys.setenv(LANG = "en")
 
 options(scipen=999)
-
 library("MASS")
 library("sandwich")
 library("zoo")
@@ -40,6 +39,23 @@ library("pacman")
 library("ggplot2")
 library("skimr")
 library("psych")
+library("groundhog")
+```
+```{r}
+pkgs <- c("MASS", 
+          "sandwich",
+          "zoo",
+          "car",
+          "lmtest",
+          "Formula",
+          "plm",
+          "stargazer",
+          "pcse",
+          "pacman",
+          "ggplot2",
+          "skimr",
+          "psych")
+groundhog.library(pkgs, "2022-06-05")
 ```
 
 ## 1. Introduction
