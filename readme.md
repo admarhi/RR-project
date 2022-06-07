@@ -4,5 +4,7 @@
 Authors: Adrian Hirt, Kai Xing
 
 
-In this project, we reproduce the results by Kai in his BS thesis. We then find a way to improve the study and compare the new results against the existing results.
-
+The Aim of this project is to validate the findings of the econometric 
+analysis conducted previously by Kai Xing. We add a variable and confirm 
+the choice of model. Additionally, we implement measures to ensure 
+reproducibilty of the results.
