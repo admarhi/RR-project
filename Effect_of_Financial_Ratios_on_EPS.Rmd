@@ -233,9 +233,14 @@ finalResult <- stargazer(OLS,
                          title = "Results", 
                          align = TRUE, 
                          type = "text", 
-                         covariate.labels = c("Return of Asset","Debt to Equity", "Log of Total Asset"), 
+                         covariate.labels = c("Return of Asset",
+                                              "Debt to Equity", 
+                                              "Log of Total Asset"), 
                          no.space = TRUE,
-                         column.labels = c("POLS", "Fixed effect", "Random effect", "Random effect with robust SE"))
+                         column.labels = c("POLS", 
+                                           "Fixed effect", 
+                                           "Random effect", 
+                                           "Random effect with robust SE"))
 
 
 
@@ -285,6 +290,7 @@ The result of R-squared is 0.589 for random effect regression. This model might 
 previousDataset = read.csv(file = "previous_dataset.csv", 
                            sep = ",", 
                            header = TRUE)
+
 head(previousDataset)
 ```
 
@@ -294,6 +300,7 @@ previousRandom <-plm(EPS~ROA+Dbequrt,
                      data = previousDataset,
                      index = c("CompanyCode", "year"), 
                      model = "random")
+
 summary(previousRandom)
 ```
 
@@ -304,9 +311,13 @@ finalResult <- stargazer(previousRandom,
                          title = "Results", 
                          align = TRUE, 
                          type = "text", 
-                         covariate.labels = c("Return of Asset","Debt to Equity","Log of Total Asset"), 
+                         covariate.labels = c("Return of Asset",
+                                              "Debt to Equity",
+                                              "Log of Total Asset"), 
                          no.space = TRUE,
-                         column.labels = c("Previous random effect", "Random effect ", "Random effect with robust SE"))
+                         column.labels = c("Previous random effect", 
+                                           "Random effect ", 
+                                           "Random effect with robust SE"))
 ```
 
 ```{r}
