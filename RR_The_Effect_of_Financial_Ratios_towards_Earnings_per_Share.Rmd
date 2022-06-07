@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo    = TRUE,
 
  
 
-```{r cache = F}
+```{r cache = F,include=FALSE}
 
 Sys.setenv(LANG = "en")
 
@@ -42,6 +42,7 @@ library("skimr")
 library("psych")
 ```
 
+<<<<<<< HEAD
 ## 1. Introduction
 
 ### 1.1 Background and Aim
@@ -102,18 +103,80 @@ skim(dataset)
 ```
 
 For the dependent variable EPS, let's check its distribution. For the histogram, one can find that it is quasi-normal distributed and right-skewed which means that more companies are generating a profit rather than a loss. 
+=======
+## 1. Reproducible Research on The Effect of Financial Ratios towards Earnings per Share
+
+### 1.1 Research background and goal
+
+Many firms have selected key **financial ratios** from financial report, such as profitability ratios (Margin), to be included as part of their corporate objectives. 
+
+In general, investors focus on the earnings they can gain in the potential investment through target's profitability ratios like earning per share, dividend yield and price/earnings ratio. Among these ratios,**earnings per share** receives much more attention from the financial community and investors. As a good indicator of the profitability for any listed companies, it is a widely used by investors in decision making for investments.  
+
+**earnings per share (EPS)** is an entity’s profit or loss that is attributable to ordinary shareholders for a reporting period divided by the weighted average number of outstanding ordinary shares during the reporting period.
+
+By tracking a firm’s earnings per share by years, people can find whether the performance of the firm is improved or not. 
+
+By comparing similar firms’ earnings per share, one can find firms of better earning power and invest in such firms. 
+
+
+The **main goal** of this Reproducible research is to **verify the influence of potential financial ratio on earnings per share and identify other important determinants of earnings per share** by the means of econometric analysis based on [financial data (Due to data protection act, dataset can be shared only through this Onedrive link after acquiring author's permit)](https://1drv.ms/u/s!AnpDgcQUjRx0jYxr6QH653-FsPViCA?e=MQB0bU)  from 2009 to 2018, derived from the financial statements of non-financial companies listed at Shanghai Stock Exchange in [RESSET](https://www.resset.cn/endatabases) database. The previous analysis was conducted in Stata. To increase the reproducibility and test the model robustness, this project will be performed in R.
+
+
+The econometric model is a panel data model which requires hypothesis testing and best model selection. The following steps are necessary to verify the robustness of the estimation result:
+
+1. First, to verify the significance of the model estimators.
+
+2. Second, to add a new hypothesis No.3: Company size has positive influence on earnings per share.  A new dependent variable: "Logarithm of Total Assets" in order to represent a given company's size and check for consistency.
+
+3. Third, to apply two new models: "Heteroskedasticity-Consistent Covariance Matrix Estimation" and "Panel-Corrected Standard Error".
+
+Based on the results, this research is designed to verify following hypothesis using the given dataset:
+
+**Hypothesis 1**: Return on asset has positive influence on earnings per share.
+
+**Hypothesis 2**: Debt to equity has negative influence on earnings per share.
+
+**Hypothesis 3:(New added in this research)** Logarithm of Total Assets (Company size measurement)  has positive influence on earnings per share.
+
+for those who have no experience in financial statements field: 
+
+The term **return on assets(ROA)** refers to a financial ratio that indicates how profitable a company is in relation to its total assets. Corporate management, analysts, and investors can use ROA to determine how efficiently a company uses its assets to generate a profit. 
+
+The term **debt to equity** ratio compares a company’s total liabilities to its shareholder equity and can be used to evaluate how much leverage a company is using.
+
+The term **Total Assets** is all the assets that one entity owns. Included in total assets is cash, accounts receivable, inventory, equipment etc.
+
+
+### 1.2 Data processing  
+
+First, let's load the data and check its structure. There is no missing values in this dataset. All 6 variables are numeric. 
+
+
+```{r}
+dataset = read.csv(file="dataset.csv", sep=",", header=TRUE)
+skim(dataset)
+```
+
+For the dependent variable EPS, let's check its distribution. For the histogram, one can find that it is quasi-normal distrubuted and right-skewed which means that more firms is generating profit instead of loss. 
+
+>>>>>>> main
 
 ```{r}
 hist(dataset$EPS, xlab = "EPS")
 ```
+Then, let's check if EPS is correlated with time. From boxplot, it is also clear to see that EPS is rather steady in different years.
 
 Next, check for a correlation between EPS and time. From boxplot, it is also clear to see that EPS is rather steady in different years.
 
 ```{r}
+<<<<<<< HEAD
 boxplot(dataset$EPS~dataset$year, 
         dataset, 
         xlab="Year",
         ylab="EPS")
+=======
+boxplot(dataset$EPS~dataset$year, dataset, xlab="Year",ylab="EPS")
+>>>>>>> main
 ```
 
 It would also be useful to check the correlation for all the variables since all the independent variables should not be correlated with each other.  
@@ -121,6 +184,29 @@ It would also be useful to check the correlation for all the variables since all
 R psych package has great advantage in the data visualization. The graphs below show the correlation and distribution for the dataset.
 
 Analysing the graphs from last row, there is a positive trend for ROA and EPS, weak negative trend for Debt to equity and EPS and almost flat linear relationship for Logarithm of Total Assets and EPS.
+<<<<<<< HEAD
+=======
+
+
+
+```{r}
+pairs.panels(dataset[c("ROA", "Dbequrt", "LOGTA",
+                             "year",
+                             "EPS")])
+```
+
+Next step will be select the most appropriate model. 
+
+### 1.3 Model selection 
+
+First, one should choose between random and fixed effect model. 
+
+**Hausmann test** therefore should be used.It evaluates the consistency of an estimator when compared to an alternative, less efficient estimator which is already consistent. The alternative hypothesis assumes the mismatch of the random effects model estimator with the simultaneous consistency of the fixed effects estimator. 
+
+**The null hypothesis** assume that this statistic has asymptotically the chi-squared distribution with the number of degrees of freedom equal to the rank of matrix.
+
+If the study rejects the null hypothesis, it means that β ̂_RE, our random effect estimator, is inconsistent. Then methods are used that do not assume that there is a correlation between individual effects and explanatory variables. So, fixed effect model is preferred and vice versa.
+>>>>>>> main
 
 
 ```{r}
@@ -165,7 +251,11 @@ phtest(fixed, random)
 Since the P-value from Hausman test is 0.3056. For $\alpha = 0.05$, we can not reject the null hypothesis. Therefore, the random effect model is more accurate than the fixed effect model. 
 
 
+<<<<<<< HEAD
 Second step would be choose between OLS and random effect model. Breusch–Pagan test is applied here.
+=======
+Second step would be choose between OLS and random effect model.Breusch–Pagan test is applied here.
+>>>>>>> main
 
 The null hypothesis is that the error variances are all equal and OLS model should be selected.
 
@@ -188,7 +278,11 @@ The p-value resulting from Breusch-Pagan test is $0.00000000000000022$. Thus, fo
 # Testing for serial correlation
 pbgtest(random)
 ```
+<<<<<<< HEAD
 Since the P-value from Breusch-Godfrey/Wooldridge test is $0.00000000000000022$. For $\alpha = 0.05$, we should reject the null hypothesis (there is not serial correlation issue). Therefore there is a serial correlation issue from the estimated random model.
+=======
+Since the P-value from Breusch-Godfrey/Wooldridge test is 0.00000000000000022. For $\alpha = 0.05$, we should reject the null hypothesis (there is not serial correlation issue). Therefore there is a serial correlation issue from the estimated random model.
+>>>>>>> main
 
 ```{r}
 # Testing for heteroskedasticity
@@ -196,7 +290,11 @@ bptest(EPS~ROA+Dbequrt+LOGTA,
        data = dataset, 
        studentize = TRUE)
 ```
+<<<<<<< HEAD
 Since the P-value from Breusch-Pagan test is $0.00000000000000022$. For $\alpha = 0.05$, we should reject the null hypothesis. Therefore there is a heteroskedasticity problem from the estimated random model besides the serial correlation problem. According to [*MacKinnon J. G., White H.* (1985)](https://www.sciencedirect.com/science/article/abs/pii/0304407685901587),**Heteroskedasticity-Consistent Covariance Matrix Estimation** method might solve there problems.
+=======
+Since the P-value from Breusch-Pagan test is 0.00000000000000022. For $\alpha = 0.05$, we should reject the null hypothesis. Therefore there is a heteroskedasticity problem from the estimated random model besides the serial correlation problem. According to [*MacKinnon J. G., White H.* (1985)](https://www.sciencedirect.com/science/article/abs/pii/0304407685901587),**Heteroskedasticity-Consistent Covariance Matrix Estimation** method might solve there problems.
+>>>>>>> main
 
 ```{r}
 # Controlling for heteroskedasticity and autocorrelation:
@@ -224,6 +322,7 @@ summary(PCSE)
 
 
 ### 1.5 Results of estimation
+<<<<<<< HEAD
 
 ```{r,eval=FALSE}
 finalResult <- stargazer(OLS, 
@@ -236,6 +335,15 @@ finalResult <- stargazer(OLS,
                          covariate.labels = c("Return of Asset","Debt to Equity", "Log of Total Asset"), 
                          no.space = TRUE,
                          column.labels = c("POLS", "Fixed effect", "Random effect", "Random effect with robust SE"))
+
+
+=======
+
+```{r,eval=FALSE}
+finalResult <- stargazer(OLS, fixed, random, Robust, title="Results", align=TRUE, type="text", 
+covariate.labels=c("Return of Asset","Debt to Equity",
+"Log of Total Asset"), no.space=TRUE,column.labels=c("POLS", "Fixed effect", "Random effect ", "Random effect with robust SE"))
+>>>>>>> main
 
 
 
@@ -298,6 +406,7 @@ summary(previousRandom)
 ```
 
 ```{r, eval = FALSE}
+<<<<<<< HEAD
 finalResult <- stargazer(previousRandom, 
                          random, 
                          Robust, 
@@ -333,7 +442,40 @@ finalResult <- stargazer(previousRandom,
 # F Statistic             7,696.022***      8,516.877***                              
 # ====================================================================================
 # Note:                                                    *p<0.1; **p<0.05; ***p<0.01
+=======
+finalResult <- stargazer(previousRandom, random, Robust, title="Results", align=TRUE, type="text", 
+covariate.labels=c("Return of Asset","Debt to Equity",
+"Log of Total Asset"), no.space=TRUE,column.labels=c("Previous random effect", "Random effect ", "Random effect with robust SE"))
+>>>>>>> main
 ```
+
+```{r}
+# Results
+# ====================================================================================
+#                                           Dependent variable:                       
+#                    -----------------------------------------------------------------
+#           
+#                Previous random effect    Random effect    Random effect with robust SE
+#                             (1)                (2)                  (3)             
+# ------------------------------------------------------------------------------------
+# Return of Asset           0.061***          0.061***              0.060***          
+#                           (0.001)            (0.001)              (0.002)           
+# Debt to Equity          -0.00005***        -0.0001***            -0.0001***         
+#                          (0.00001)          (0.00001)            (0.00001)          
+# Log of Total Asset                          0.094***              0.092***          
+#                                              (0.005)              (0.009)           
+# Constant                  0.107***          -1.990***                               
+#                           (0.011)            (0.110)                                
+# ------------------------------------------------------------------------------------
+# Observations               5,940              5,940                                 
+# R2                         0.565              0.589                                 
+# Adjusted R2                0.564              0.589                                 
+# F Statistic             7,696.022***      8,516.877***                              
+# ====================================================================================
+# Note:                                                    *p<0.1; **p<0.05; ***p<0.01
+```
+
+
 
 As we can see, the new model obtained similar result compared to the previous model. Previous independent variables are still statistically significant for the new model at the significant level of 0.01. The new added variable "Log of Total Asset" is also statistically significant at the significant level of 0.01. The R squared value has been improved from 0.565 to 0.589 thanks to the added independent variable. 
 
