@@ -1,6 +1,6 @@
 ---
-title: "Reproducible Research on The Effect of Financial Ratios towards Earnings per Share"
-author: "Kai Xing ID: 389862 Adrian Hirt ID:K-14561"
+title: "Effect of Financial Ratios on Earnings per Share"
+author: "Kai Xing ID: 389862; Adrian Hirt ID:K-14561"
 date: "20/05/2022"
 output: 
   html_document:
@@ -38,67 +38,123 @@ library("stargazer")
 library("pcse")
 library("pacman")
 library("ggplot2")
-
+library("skimr")
+library("psych")
 ```
 
-## 1. The Effect of Financial Ratios towards Earnings per Share
+## 1. Introduction
 
-**The aim** of this project is to reproduce an econometric analysis of the effect of financial ratios towards earnings per share. The previous analysis was conducted in Stata. To increase the reproducibility, we will perform the analysis in R.
+### 1.1 Background and Aim
 
-The econometric model is a panel data model which requires hypothesis testing and model selection. The following steps are necessary to verify the robustness of the estimation result:
+Many firms include selected key **financial ratios** as part of their corporate objectives. These ratios can be easily obtained from a company's financial report, giving shareholders and potential investors the ability to make informed decisions about their investment in a given company.
 
-1. First, to verify the significance of the estimators to see if there are any inconsistencies.
+In general, investors focus on the earnings they can gain in the potential investment through target's profitability ratios like earning per share, dividend yield and price/earnings ratio. Among these ratios, **Earnings Per Share (EPS)** receives the most attention from the financial community and investors. It is used by investors as an indicator of the profitability of listed companies, making it an important tool in the decision making process for investments.  
 
-2. Second, to add a **new dependent variable**: "Logarithm of Total Assets" in order to represent a given company's size and check for consistency.
+The **primary aim** of this Reproducible research is to **investigate the influence of various financial ratios on EPS and identify the most important determinants of EPS** through an econometric analysis.
 
-3. Third, to apply **two more models**: "Heteroskedasticity-Consistent Covariance Matrix Estimation" and "Panel-Corrected Standard Error".
-
-Based on the results, this research is designed to verify following hypothesis:
-
-**Hypothesis 1**: Return on asset has positive influence on earnings per share.
-
-**Hypothesis 2**: Debt to equity has negative influence on earnings per share.
-
-**Hypothesis 3**: Company size has positive influence on earnings per share.
+Particularly, **EPS** describes a company's profit or loss during a reporting period, divided by the weighted average number of outstanding ordinary shares during the same reporting period. By analyzing a company's EPS over the years, it becomes apparent if the performance of the company has improved from an investor's point of view. By comparing similar companies based on their EPS, conclusions about the best possible investment may be drawn. 
 
 
-### 1.1 Data processing  
+#### Data
+The analysis is based on the [financial data](https://1drv.ms/u/s!AnpDgcQUjRx0jYxr6QH653-FsPViCA?e=MQB0bU) (Access requires author's permit) from the [RESSET](https://www.resset.cn/endatabases) database. The dataset includes data from financial reports of non-financial companies listed at Shanghai Stock Exchange, ranging from 2009 to 2018. Previously, the analysis was conducted in Stata. To increase the reproducibility and test the model robustness, this project will be performed in R.The econometric model is a panel data model which requires hypothesis testing and best model selection. 
+
+#### Outline
+The following steps are necessary to verify the robustness of the estimation result:
+
+1. First, to verify the significance of the model estimators.
+
+2. Second, to test an additional hypothesis. H3: Company size has positive influence on earnings per share. To quantify company size, a new dependent variable is introduced: "Logarithm of Total Assets".
+
+4. Third, to apply two new models: "Heteroskedasticity-Consistent Covariance Matrix Estimation" and "Panel-Corrected Standard Error".
+
+#### Hypotheses
+
+Based on the results, this research is designed to test the following hypotheses using the given dataset:
+
+**Hypothesis 0**: The variables under investigation do not significantly influence EPS
+
+**Hypothesis 1**: Return on asset has positive influence on EPS.
+
+**Hypothesis 2**: Debt to equity has negative influence on EPS.
+
+**Hypothesis 3**: Logarithm of total assets has positive influence on EPS.
+
+#### Definitions
+
+The term **Return on Assets (ROA)** refers to a financial ratio that indicates how profitable a company is in relation to its total assets. Corporate management, analysts, and investors can use ROA to determine how efficiently a company uses its assets to generate a profit. 
+
+The term **Debt to Equity** ratio compares a company’s total liabilities to its shareholder equity and can be used to evaluate how much leverage a company is using.
+
+The term **Total Assets** is all the assets that one company owns. Included in total assets is cash, accounts receivable, inventory, equipment etc.
+
+
+### 1.2 Data processing  
+
+First, load the data and check its structure. There are no missing values in the dataset. All 6 variables are numeric. 
 
 
 ```{r}
-dataset = read.csv(file="dataset.csv", sep=",", header=TRUE)
-head(dataset)
+dataset = read.csv(file = "dataset.csv", 
+                   sep = ",", 
+                   header = TRUE)
+
+skim(dataset)
 ```
 
-```{r}
-#Checking missing value
-sum(is.na(dataset))
-```
-```{r}
-boxplot(dataset$EPS~dataset$year, dataset, xlab="Year",ylab="EPS")
-```
+For the dependent variable EPS, let's check its distribution. For the histogram, one can find that it is quasi-normal distributed and right-skewed which means that more companies are generating a profit rather than a loss. 
 
 ```{r}
 hist(dataset$EPS, xlab = "EPS")
 ```
 
+Next, check for a correlation between EPS and time. From boxplot, it is also clear to see that EPS is rather steady in different years.
+
 ```{r}
-qplot(EPS, data = dataset, geom = "density", color = year)
+boxplot(dataset$EPS~dataset$year, 
+        dataset, 
+        xlab="Year",
+        ylab="EPS")
 ```
 
+It would also be useful to check the correlation for all the variables since all the independent variables should not be correlated with each other.  
 
-### 1.2 Model selection 
+R psych package has great advantage in the data visualization. The graphs below show the correlation and distribution for the dataset.
+
+Analysing the graphs from last row, there is a positive trend for ROA and EPS, weak negative trend for Debt to equity and EPS and almost flat linear relationship for Logarithm of Total Assets and EPS.
 
 
 ```{r}
-random <-plm(EPS~ROA+Dbequrt+LOGTA, data=dataset, 
-             index=c("CompanyCode", "year"), model="random")
+pairs.panels(dataset[c("ROA", "Dbequrt", "LOGTA", "year", "EPS")])
+```
+
+Next step will be select the most appropriate model. 
+
+### 1.3 Model selection 
+
+First, one should choose between random and fixed effect model. 
+
+**Hausmann test** therefore should be used. It evaluates the consistency of an estimator when compared to an alternative, less efficient estimator which is already consistent. The alternative hypothesis assumes the mismatch of the random effects model estimator with the simultaneous consistency of the fixed effects estimator. 
+
+**The null hypothesis** assume that this statistic has asymptotically the chi-squared distribution with the number of degrees of freedom equal to the rank of matrix.
+
+If the study rejects the null hypothesis, it means that $β_R$, our random effect estimator, is inconsistent. Then methods are used that do not assume that there is a correlation between individual effects and explanatory variables. So, fixed effect model is preferred and vice versa.
+
+
+```{r}
+random <-plm(EPS~ROA+Dbequrt+LOGTA, 
+             data = dataset, 
+             index = c("CompanyCode", "year"), 
+             model = "random")
+
 summary(random)
 ```
 
 ```{r}
-fixed <-plm(EPS~ROA+Dbequrt+LOGTA, data=dataset, 
-            index=c("CompanyCode", "year"), model="within")
+fixed <-plm(EPS~ROA+Dbequrt+LOGTA, 
+            data = dataset, 
+            index = c("CompanyCode", "year"), 
+            model = "within")
+
 summary(fixed)
 ```
 
@@ -108,90 +164,184 @@ phtest(fixed, random)
 ```
 Since the P-value from Hausman test is 0.3056. For $\alpha = 0.05$, we can not reject the null hypothesis. Therefore, the random effect model is more accurate than the fixed effect model. 
 
+
+Second step would be choose between OLS and random effect model. Breusch–Pagan test is applied here.
+
+The null hypothesis is that the error variances are all equal and OLS model should be selected.
+
 ```{r}
-OLS <-plm(EPS~ROA+Dbequrt+LOGTA, data=dataset, 
-          index=c("CompanyCode", "year"), model="pooling")
+OLS <-plm(EPS~ROA+Dbequrt+LOGTA, 
+          data = dataset, 
+          index = c("CompanyCode", "year"), 
+          model = "pooling")
+
 summary(OLS)
-plmtest(OLS, type=c("bp"))
+
+plmtest(OLS, type = c("bp"))
 
 ```
-The p-value resulting from Breusch-Pagan test is 0.00000000000000022. Thus, for $\alpha = 0.05$, we should reject the null hypothesis. Therefore individual effect is significant and random effect model is preferred than OLS model. We should evaluate random effect model compared to the other two models.
+The p-value resulting from Breusch-Pagan test is $0.00000000000000022$. Thus, for $\alpha = 0.05$, we should reject the null hypothesis. Therefore individual effect is significant and random effect model is preferred than OLS model. We should evaluate random effect model compared to the other two models.
 
-### 1.3 Estimation and diagnostic tests
+### 1.4 Estimation and diagnostic tests
 
 ```{r}
 # Testing for serial correlation
 pbgtest(random)
 ```
-Since the P-value from Breusch-Godfrey/Wooldridge test is 0.00000000000000022. For $\alpha = 0.05$, we should reject the null hypothesis. Therefore there is a serial correlation problem from the estimated random model.
+Since the P-value from Breusch-Godfrey/Wooldridge test is $0.00000000000000022$. For $\alpha = 0.05$, we should reject the null hypothesis (there is not serial correlation issue). Therefore there is a serial correlation issue from the estimated random model.
 
 ```{r}
 # Testing for heteroskedasticity
-bptest(EPS~ROA+Dbequrt+LOGTA, data=dataset, studentize=TRUE)
+bptest(EPS~ROA+Dbequrt+LOGTA, 
+       data = dataset, 
+       studentize = TRUE)
 ```
-Since the P-value from Breusch-Pagan test is 0.00000000000000022. For $\alpha = 0.05$, we should reject the null hypothesis. Therefore there is a heteroskedasticity problem from the estimated random model besides the serial correlation problem. According to *MacKinnon J. G., White H.* (1985),**Heteroskedasticity-Consistent Covariance Matrix Estimation** method might solve there problems..
+Since the P-value from Breusch-Pagan test is $0.00000000000000022$. For $\alpha = 0.05$, we should reject the null hypothesis. Therefore there is a heteroskedasticity problem from the estimated random model besides the serial correlation problem. According to [*MacKinnon J. G., White H.* (1985)](https://www.sciencedirect.com/science/article/abs/pii/0304407685901587),**Heteroskedasticity-Consistent Covariance Matrix Estimation** method might solve there problems.
 
 ```{r}
 # Controlling for heteroskedasticity and autocorrelation:
-Robust <- coeftest(fixed, vcov. = vcovHC(fixed, method="white1", type="HC0", cluster="group"))
+Robust <- coeftest(fixed, 
+                   vcov. = vcovHC(fixed, 
+                                  method = "white1", 
+                                  type = "HC0", 
+                                  cluster = "group"))
 ```
 
-Also **Panel-Corrected Standard Error(PCSE)** method can also solve these issues and allow for better inference from estimated model shown by *Delia Bailey, Jonathan N. Katz*.
+Also **Panel-Corrected Standard Error(PCSE)** method can also solve these issues and allow for better inference from estimated model shown by [*Delia Bailey, Jonathan N. Katz*](https://authors.library.caltech.edu/44318/).
 
 
 ```{r}
-lm_pcse <- lm(EPS~ROA + Dbequrt + LOGTA, data = dataset)
-PCSE <- pcse(lm_pcse,groupN = dataset$CompanyCode, groupT =dataset$year)
+lm_pcse <- lm(EPS~ROA + Dbequrt + LOGTA, 
+              data = dataset)
+
+PCSE <- pcse(lm_pcse,
+             groupN = dataset$CompanyCode, 
+             groupT = dataset$year)
+
 summary(PCSE)
 ```
 
 
 
-### 1.4 Results of estimation
+### 1.5 Results of estimation
 
-```{r}
-finalResult <- stargazer(OLS, fixed, random, Robust, title="Results", align=TRUE, type="text", 
-covariate.labels=c("Return of Asset","Debt to Equity",
-"Log of Total Asset"), no.space=TRUE,column.labels=c("POLS", "Fixed effect", "Random effect ", "Random effect with robust SE"))
+```{r,eval=FALSE}
+finalResult <- stargazer(OLS, 
+                         fixed, 
+                         random, 
+                         Robust, 
+                         title = "Results", 
+                         align = TRUE, 
+                         type = "text", 
+                         covariate.labels = c("Return of Asset","Debt to Equity", "Log of Total Asset"), 
+                         no.space = TRUE,
+                         column.labels = c("POLS", "Fixed effect", "Random effect", "Random effect with robust SE"))
+
+
 
 
 ``` 
+
+```{r}
+# Results
+# =====================================================================================================================
+#                                                      Dependent variable: EPS                                        
+#                    --------------------------------------------------------------------------------------------------
+#                                                                                              
+#                               POLS                    Fixed effect        Random effect   Random effect with robust SE
+#                                (1)                         (2)                  (3)                  (4)             
+# ---------------------------------------------------------------------------------------------------------------------
+# Return of Asset             0.062***                    0.060***             0.061***              0.060***          
+#                              (0.001)                     (0.001)              (0.001)              (0.002)           
+# Debt to Equity             -0.0001***                  -0.0001***           -0.0001***            -0.0001***         
+#                             (0.00001)                   (0.00001)            (0.00001)            (0.00001)          
+# Log of Total Asset          0.095***                    0.092***             0.094***              0.092***          
+#                              (0.003)                     (0.006)              (0.005)              (0.009)           
+# Constant                    -2.039***                                        -1.990***                               
+#                              (0.076)                                          (0.110)                                
+# ---------------------------------------------------------------------------------------------------------------------
+# Observations                  5,940                       5,940                5,940                                 
+# R2                            0.596                       0.588                0.589                                 
+# Adjusted R2                   0.595                       0.542                0.589                                 
+# F Statistic        2,914.319*** (df = 3; 5936) 2,538.729*** (df = 3; 5343) 8,516.877***                              
+# =====================================================================================================================
+# Note:                                                                                     *p<0.1; **p<0.05; ***p<0.01
+# 
+```
+
 The above table presents the regression result step by step with pooled ordinary least squared (POLS), fixed effect (FE), random effect (RE), and random effect model with robust standard error. Since the existing of heteroskedasticity and autocorrelation issues, random effect model with robust Standard Error method should be made for this model. This study will focus on its result and compare the differences among other models. 
 
-Random effect with robust standard error model regression shows that the ROA has p-value of 0.002 (0.002 < 0.01). So, at the significance level of 0.05, **return on asset** has positive influence on earnings per share. If ROA increases by one unit and other variables stay the same, EPS will increase by 0.06. In the previous research **R. Bratamanggala* conclude that return on asset has significant effect over earnings per share as well. Their analysis is focusing on the Indonesia manufacturing sector using companies listed in the Indonesian Stock Exchange.
+Random effect with robust standard error model regression shows that the ROA has p-value of 0.002 (0.002 < 0.01). So, at the significance level of 0.05, **ROA** has positive influence on earnings per share. If ROA increases by one unit and other variables stay the same, EPS will increase by 0.06. In the previous research *R. Bratamanggala* concludes, that ROA has significant effect on EPS as well. Their analysis is focusing on the Indonesia manufacturing sector using companies listed in the Indonesian Stock Exchange.
 
-**Debt to Equity** has p-value of 0.00001 (0.00001 < 0.01). So, at the significance level of 0.01, debt to equity has negative influence on earnings per share. If Debt to Equity increases by one unit and other variables stay the same, EPS will decrease by 0.0001. Debt to Equity represents company’s capital structure. A higher value shows that the company uses aggressively financing policy. Normally, as firms apply more debt, the firm losses its capacity to gain profit because of high interest. However, in the previous research done by R. Bratamanggala  and Khalaf , they also find a positive correlation between Debt to Equity and earnings per share. The reason behind it might be that the debt can support short term liquidity issue and long-term growth for the firm. In this research, Debt to equity has negative influence over earnings per share.
+**Debt to Equity** has p-value of 0.00001 (0.00001 < 0.01). So, at the significance level of 0.01, debt to equity has negative influence on earnings per share. If Debt to Equity increases by one unit and other variables stay the same, EPS will decrease by 0.0001. Debt to Equity represents companies capital structure. A higher value shows that the company uses aggressive financing policy. Normally, as firms apply more debt, the firm looses its capacity to gain profit because of high interest. However, in the previous research done by *Bratamanggala  and Khalaf*, they also find a positive correlation between Debt to Equity and EPS. The reason behind it might be that the debt can support short term liquidity issue and long-term growth for the firm. In this research, Debt to equity has negative influence over earnings per share.
 
-**Logarithm of Total Asset** has p-value of 0.009 (0.009< 0.01). So, at the significance level of 0.01, logarithm of total asset (company size) has positive influence on earnings per share. If LOGTA increases by one percent and other variables stay the same, EPS will increase by 0.092. 
+**Logarithm of Total Asset** has p-value of 0.009 (0.009< 0.01). So, at the significance level of 0.01, logarithm of total asset (company size) has positive influence on EPS. If LOGTA increases by one percent and other variables stay the same, EPS will increase by 0.092. 
 
 The result of R-squared is 0.589 for random effect regression. This model might explain the changes of earnings per share up to 0.589 and the rest is influenced by other variables which are not discussed in this research. The other  regressions also provide similar results. All variables in different models pasted t-test at significance level of 0.01.  
 
 ## 2. Comparison between previous studies and the current study
 
 ```{r}
-previousDataset = read.csv(file="previous_dataset.csv", sep=",", header=TRUE)
+previousDataset = read.csv(file = "previous_dataset.csv", 
+                           sep = ",", 
+                           header = TRUE)
 head(previousDataset)
 ```
 
 
 ```{r}
-previousRandom <-plm(EPS~ROA+Dbequrt, data=previousDataset, 
-             index=c("CompanyCode", "year"), model="random")
+previousRandom <-plm(EPS~ROA+Dbequrt, 
+                     data = previousDataset,
+                     index = c("CompanyCode", "year"), 
+                     model = "random")
 summary(previousRandom)
 ```
 
+```{r, eval = FALSE}
+finalResult <- stargazer(previousRandom, 
+                         random, 
+                         Robust, 
+                         title = "Results", 
+                         align = TRUE, 
+                         type = "text", 
+                         covariate.labels = c("Return of Asset","Debt to Equity","Log of Total Asset"), 
+                         no.space = TRUE,
+                         column.labels = c("Previous random effect", "Random effect ", "Random effect with robust SE"))
+```
+
 ```{r}
-finalResult <- stargazer(previousRandom, random, Robust, title="Results", align=TRUE, type="text", 
-covariate.labels=c("Return of Asset","Debt to Equity",
-"Log of Total Asset"), no.space=TRUE,column.labels=c("Previous random effect", "Random effect ", "Random effect with robust SE"))
+# Results
+# ====================================================================================
+#                                           Dependent variable:                       
+#                    -----------------------------------------------------------------
+#           
+#                Previous random effect    Random effect    Random effect with robust SE
+#                             (1)                (2)                  (3)             
+# ------------------------------------------------------------------------------------
+# Return of Asset           0.061***          0.061***              0.060***          
+#                           (0.001)            (0.001)              (0.002)           
+# Debt to Equity          -0.00005***        -0.0001***            -0.0001***         
+#                          (0.00001)          (0.00001)            (0.00001)          
+# Log of Total Asset                          0.094***              0.092***          
+#                                              (0.005)              (0.009)           
+# Constant                  0.107***          -1.990***                               
+#                           (0.011)            (0.110)                                
+# ------------------------------------------------------------------------------------
+# Observations               5,940              5,940                                 
+# R2                         0.565              0.589                                 
+# Adjusted R2                0.564              0.589                                 
+# F Statistic             7,696.022***      8,516.877***                              
+# ====================================================================================
+# Note:                                                    *p<0.1; **p<0.05; ***p<0.01
 ```
 
 As we can see, the new model obtained similar result compared to the previous model. Previous independent variables are still statistically significant for the new model at the significant level of 0.01. The new added variable "Log of Total Asset" is also statistically significant at the significant level of 0.01. The R squared value has been improved from 0.565 to 0.589 thanks to the added independent variable. 
 
-What's more, this study applied new model(Random effect with robust SE) to deal with heteroskedasticity and autocorrelation issues. The obtained coefficients are very close to the original coefficients which also proved the robustness and consistency for the model. This shows stability of the estimation and provide strong evidence for the conclusion.
+What's more, this study applied new model (Random effect with robust SE) to deal with heteroskedasticity and autocorrelation issues. The obtained coefficients are very close to the original coefficients which also proved the robustness and consistency for the model. This shows stability of the estimation and provide strong evidence for the conclusion.
 
 
 ## 3. Conclusion
+
 This research is conducted to verify the empirical evidence about the influence of financial ratios and company size on earnings per share partially and simultaneously on listed a share companies at Shanghai Stock Exchange from 2009 to 2018.
 
 The results obtained are:
@@ -200,7 +350,7 @@ The results obtained are:
 
 -	Debt to equity has **negative influence on earnings per share**.
 
--	Company size has **positive influence on earnings per share**.
+-	Logarithm of Total Assets has **positive influence on earnings per share**.
 
 The research conclusion can be the basis for investors to evaluate one company’s performance. For company’s manager board, it can also be applied to diagnose the company’s financial situation and set up strategy to increase its earnings. For the research sample, the traditional financial analysis still plays a key role in evaluating one’s performance, especially, the profitability and leveraging ratio. A company that can constantly generate desired earnings and use leverage wisely will growth healthily and preferred by investors. Also because of economies of scale, a bigger company size will also benefit the company.
 
